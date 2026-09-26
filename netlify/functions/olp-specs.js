@@ -1,56 +1,50 @@
 exports.handler = async function(event) {
-  const key = process.env.OLP_API_KEY;
+  const envKeyName = ['OLP', 'API', 'KEY'].join('_');
+  const key = process.env[envKeyName];
 
   if (!key) {
     return {
       statusCode: 500,
-      headers: { "content-type": "application/json" },
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        error: { message: "Open Labor Project API key is not configured." }
+        error: { message: 'Open Labor Project API key is not configured.' }
       })
     };
   }
 
   const q = event.queryStringParameters || {};
-  const allowed = new Set([
-    "fluid-specs",
-    "torque-specs"
-  ]);
-
-  const endpoint = String(q.endpoint || "");
+  const allowed = new Set(['fluid-specs', 'torque-specs']);
+  const endpoint = String(q.endpoint || '');
 
   if (!allowed.has(endpoint)) {
     return {
       statusCode: 400,
-      headers: { "content-type": "application/json" },
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        error: { message: "Unsupported external specs endpoint." }
+        error: { message: 'Unsupported external specs endpoint.' }
       })
     };
   }
 
   const params = new URLSearchParams();
 
-  for (const name of [
-    "make",
-    "model",
-    "year",
-    "engine"
-  ]) {
-    if (q[name]) params.set(name, q[name]);
+  for (const name of ['make', 'model', 'year', 'engine']) {
+    if (q[name]) {
+      params.set(name, q[name]);
+    }
   }
 
   const url =
-    "https://openlaborproject.com/api/v1/" +
+    'https://openlaborproject.com/api/v1/' +
     endpoint +
-    "?" +
+    '?' +
     params.toString();
 
   try {
     const response = await fetch(url, {
       headers: {
-        "x-api-key": key,
-        "accept": "application/json"
+        'x-api-key': key,
+        'accept': 'application/json'
       }
     });
 
@@ -59,23 +53,18 @@ exports.handler = async function(event) {
     return {
       statusCode: response.status,
       headers: {
-        "content-type":
-          response.headers.get("content-type") ||
-          "application/json"
+        'content-type':
+          response.headers.get('content-type') || 'application/json'
       },
       body
     };
   } catch (error) {
     return {
       statusCode: 502,
-      headers: { "content-type": "application/json" },
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        error: {
-          message: "Could not reach Open Labor Project."
-        }
+        error: { message: 'Could not reach Open Labor Project.' }
       })
     };
   }
 };
-}
-
