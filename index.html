@@ -790,7 +790,27 @@ function olpRows(data,key){
  return Array.isArray(candidates)?candidates:[];
 }
 function olpLabel(x){return x?.fluidType||x?.fluid||x?.system||x?.type||x?.component||x?.job||x?.name||'Specification';}
-function olpValue(x){return x?.capacity??x?.capacityQt??x?.value??x?.lbFt??x?.torque??x?.spec??x?.notes??'';}
+function olpValue(x){
+ const v=
+   x?.capacity ??
+   x?.capacityQt ??
+   x?.oilCapacity ??
+   x?.oil_capacity ??
+   x?.capacity_quarts ??
+   x?.quarts ??
+   x?.quantity ??
+   x?.amount ??
+   x?.value ??
+   x?.spec ??
+   x?.notes ??
+   '';
+
+ if(v && typeof v==='object'){
+   return v.value ?? v.amount ?? v.quantity ?? JSON.stringify(v);
+ }
+
+ return v;
+}
 function renderOlpRows(data,key,title){
  const rows=olpRows(data,key); const d=data?.data||data; const meta=data?.meta||{};
  if(!rows.length){$('olpSpecResult').innerHTML='<div class="specs-card"><h4>🌐 '+ownerEscape(title)+'</h4><div class="specs-unknown">No external data was returned for this exact vehicle.</div></div>';return;}
