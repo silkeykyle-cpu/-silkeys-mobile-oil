@@ -792,7 +792,7 @@ function olpRows(data,key){
 function olpLabel(x){return x?.fluidType||x?.fluid||x?.system||x?.type||x?.component||x?.job||x?.name||'Specification';}
 function olpValue(x){
  const v=
-   x?.capacity ??
+   x?.capacityQuarts ??
    x?.capacityQt ??
    x?.oilCapacity ??
    x?.oil_capacity ??
