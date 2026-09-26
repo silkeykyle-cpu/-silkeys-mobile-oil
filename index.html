@@ -712,12 +712,60 @@ function initStandaloneSpecLookup(){
   e.onchange=standaloneSpecLookup;
  }
 }
-function standaloneSpecLookup(){
- const y=$('standaloneSpecYear')?.value||'',m=$('standaloneSpecMake')?.value||'',mo=$('standaloneSpecModel')?.value||'',e=$('standaloneSpecEngine')?.value||'';
- const box=$('standaloneSpecResult'); if(!box)return;
- box.innerHTML=vehicleSpecHtml({vehicle_year:y,vehicle_make:m,vehicle_model:mo,engine:e})||'<div class="empty">Choose a vehicle to see specs.</div>';
-}
+  async function standaloneSpecLookup(){
+ const y=$('standaloneSpecYear')?.value||'';
+ const m=$('standaloneSpecMake')?.value||'';
+ const mo=$('standaloneSpecModel')?.value||'';
+ const e=$('standaloneSpecEngine')?.value||'';
 
+ const box=$('standaloneSpecResult');
+ const external=$('olpSpecResult');
+
+ if(!box)return;
+
+ box.innerHTML=
+   vehicleSpecHtml({
+     vehicle_year:y,
+     vehicle_make:m,
+     vehicle_model:mo,
+     engine:e
+   })||
+   '<div class="empty">Choose a vehicle to see specs.</div>';
+
+ if(!y||!m||!mo||!e)return;
+
+ if(external){
+   external.innerHTML=
+     '<div class="empty">Loading oil and fluid specs…</div>';
+
+   try{
+     const v={
+       year:y,
+       make:m,
+       model:mo,
+       engine:e
+     };
+
+     const r=await olpFetch('fluid-specs',v);
+
+     renderOlpRows(
+       r.data,
+       'fluidSpecs',
+       'Fluid / Oil Specs'+(r.cached?' (cached)':'')
+     );
+
+   }catch(err){
+     console.error('Automatic external specs lookup failed:',err);
+
+     external.innerHTML=
+       '<div class="specs-card">'+
+       '<div class="specs-unknown">External specs lookup unavailable.</div>'+
+       '<div class="spec-note">'+
+       ownerEscape(err?.message||'Please try again.')+
+       '</div></div>';
+   }
+ }
+}
 function olpVehicleSelection(){
  const y=$('standaloneSpecYear')?.value||'',m=$('standaloneSpecMake')?.value||'',mo=$('standaloneSpecModel')?.value||'',e=$('standaloneSpecEngine')?.value||'';
  if(!y||!m||!mo)return null;
