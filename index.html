@@ -206,22 +206,74 @@ function engineLabel(v){
   return label||String(v.trany||'Engine configuration');
 }
 async function loadVehicleEngines(year,make,model){
-  const key=year+'|'+make+'|'+model;if(!year||!make||!model)return [];
+  const key=year+'|'+make+'|'+model;
+  if(!year||!make||!model)return [];
   if(vehicleCatalogCache.engines[key])return vehicleCatalogCache.engines[key];
+
   try{
-    if(!vehicleCatalogCache.modelRaw[year+'|'+make]) await loadVehicleModels(year,make);
-    const rawModels=vehicleCatalogCache.modelRaw[year+'|'+make]?.[model]||[model];
-    const optionIds=[];
-    for(const rawModel of rawModels){
-      const data=await vehicleCatalogFetch('options?year='+encodeURIComponent(year)+'&make='+encodeURIComponent(make)+'&model='+encodeURIComponent(rawModel));
-      (data.menuItem||[]).map(x=>x.value).filter(Boolean).forEach(id=>{if(!optionIds.includes(id))optionIds.push(id);});
+    if(!vehicleCatalogCache.modelRaw[year+'|'+make]){
+      await loadVehicleModels(year,make);
     }
-    const details=await Promise.all(optionIds.slice(0,160).map(async id=>{try{return await vehicleCatalogFetch('vehicle/'+encodeURIComponent(id));}catch(e){return null;}}));
-    const seen=new Set(),out=[];
-    details.flatMap(d=>d?.vehicle||d?.vehicles||[]).forEach(v=>{const label=engineLabel(v);if(label&&!seen.has(label)){seen.add(label);out.push(label);}});
+
+    const rawModels=
+      vehicleCatalogCache.modelRaw[year+'|'+make]?.[model]||[model];
+
+    const engines=new Set();
+
+    for(const rawModel of rawModels){
+      const data=await vehicleCatalogFetch(
+        'options?year='+encodeURIComponent(year)+
+        '&make='+encodeURIComponent(make)+
+        '&model='+encodeURIComponent(rawModel)
+      );
+
+      for(const item of (data.menuItem||[])){
+        const text=String(item.text||'').trim();
+
+        let displacement='';
+        let cylinders='';
+
+        const d=text.match(/(\d+(?:\.\d+)?)\s*L\b/i);
+        const c=text.match(/(\d+)\s*(?:cyl|cylinder)/i);
+
+        if(d) displacement=d[1]+'L';
+        if(c) cylinders=c[1];
+
+        let label='';
+
+        if(displacement && cylinders){
+          const n=Number(cylinders);
+          const type=n===4?'4-Cylinder':
+                     n===6?'V6':
+                     n===8?'V8':
+                     n===10?'V10':
+                     n===12?'V12':
+                     cylinders+'-Cylinder';
+
+          label=displacement+' '+type;
+        }else{
+          const v=text.match(/\b(V\d+)\b/i);
+          if(displacement && v){
+            label=displacement+' '+v[1].toUpperCase();
+          }
+        }
+
+        if(label) engines.add(label);
+      }
+    }
+
+    const out=[...engines].sort((a,b)=>
+      a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'})
+    );
+
     vehicleCatalogCache.engines[key]=out;
-  }catch(e){vehicleCatalogCache.engines[key]=[];}
-  return vehicleCatalogCache.engines[key];
+    return out;
+
+  }catch(e){
+    console.error('Engine lookup failed:',e);
+    vehicleCatalogCache.engines[key]=[];
+    return [];
+  }
 }
 async function initVehicleDropdowns(){
   const y=$('year'),m=$('make'),mo=$('model'),e=$('engine'); if(!y||!m||!mo||!e)return;
